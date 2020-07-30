@@ -102,9 +102,21 @@ const List<ConfigurationItem> cfgItems = <ConfigurationItem>[
       title: 'Sensors',
       icon: Icons.poll_outlined,
       body: SensorConfigurationPage()),
-  ConfigurationItem(title: 'System', icon: Icons.system_update),
-  ConfigurationItem(title: 'GPS', icon: Icons.gps_fixed_rounded),
-  ConfigurationItem(title: 'Recording', icon: Icons.reorder)
+  ConfigurationItem(
+    title: 'System',
+    icon: Icons.system_update,
+    body: SizedBox.shrink(),
+  ),
+  ConfigurationItem(
+    title: 'GPS',
+    icon: Icons.gps_fixed_rounded,
+    body: SizedBox.shrink(),
+  ),
+  ConfigurationItem(
+    title: 'Recording',
+    icon: Icons.reorder,
+    body: SizedBox.shrink(),
+  )
 ];
 
 class ConfigurationCard extends StatelessWidget {
@@ -174,10 +186,24 @@ class ConfigurationPage extends StatelessWidget {
   }
 }
 
-class SensorConfigurationPage extends StatelessWidget {
-  const SensorConfigurationPage({Key key}) : super(key: key);
+// ######## Sensor configuration page ########
 
-  void _showReset(context) {
+class CancelAlertDialog {
+  const CancelAlertDialog();
+  void _onDefault(context) {
+    Navigator.of(context).pop();
+  }
+
+  void _onDiscard(context) {
+    Navigator.of(context).pop();
+  }
+
+  void _onCancel(context) {
+    Navigator.of(context).pop();
+  }
+
+  void display(BuildContext context) {
+    const TextStyle textStyle = TextStyle(fontWeight: FontWeight.bold);
     showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -185,53 +211,50 @@ class SensorConfigurationPage extends StatelessWidget {
             title: Row(
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: const Icon(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Icon(
                     Icons.warning,
-                    color: Colors.amber,
+                    color: Colors.amber[300],
                   ),
                 ),
                 Text('Reset'),
               ],
             ),
-            content: Text('Do you wish reset the sensors configuration?'),
+            content: Text('Do you wish to reset the sensors configuration?'),
             actions: <FlatButton>[
               FlatButton(
                 child: Text(
-                  'Default configuration',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  'Default Configuraiton',
+                  style: textStyle,
                 ),
-                onPressed: () {
-                  final snackBar = SnackBar(
-                    content: Text('Configuration set to default!'),
-                    action: SnackBarAction(
-                      label: 'Undo',
-                      onPressed: () {},
-                    ),
-                  );
-                  Navigator.of(context).pop();
-                  Scaffold.of(context).showSnackBar(snackBar);
-                },
+                onPressed: () => _onDefault(context),
               ),
               FlatButton(
                 child: Text(
-                  'Discard modifications',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  'Discard Changes',
+                  style: textStyle,
                 ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
+                onPressed: () => _onDiscard(context),
               ),
               FlatButton(
                 child: Text(
                   'Cancel',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: textStyle,
                 ),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => _onCancel(context),
               ),
             ],
           );
         });
+  }
+}
+
+class SensorConfigurationPage extends StatelessWidget {
+  const SensorConfigurationPage({Key key}) : super(key: key);
+
+  void _showReset(context) {
+    final CancelAlertDialog alert = CancelAlertDialog();
+    alert.display(context);
   }
 
   @override
