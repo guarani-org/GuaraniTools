@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'package:flutter/material.dart';
 
 void main() => runApp(GniTools());
@@ -90,6 +91,25 @@ class ScreenCard extends StatelessWidget {
   }
 }
 
+// #### Not Implemented Page ####
+
+class NotImplementedPage extends StatelessWidget {
+  const NotImplementedPage({Key key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: ElevatedButton(
+          child: Text('Go Back'),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
+  }
+}
+
+// #### Configuration Page ####
+
 class ConfigurationItem {
   const ConfigurationItem({this.title, this.icon, this.body});
   final String title;
@@ -105,17 +125,17 @@ const List<ConfigurationItem> cfgItems = <ConfigurationItem>[
   ConfigurationItem(
     title: 'System',
     icon: Icons.system_update,
-    body: SizedBox.shrink(),
+    body: NotImplementedPage(),
   ),
   ConfigurationItem(
     title: 'GPS',
     icon: Icons.gps_fixed_rounded,
-    body: SizedBox.shrink(),
+    body: NotImplementedPage(),
   ),
   ConfigurationItem(
     title: 'Recording',
     icon: Icons.reorder,
-    body: SizedBox.shrink(),
+    body: NotImplementedPage(),
   )
 ];
 
@@ -293,7 +313,175 @@ class SensorConfigurationPage extends StatelessWidget {
           ),
         ],
       ),
-      body: GridView.count(crossAxisCount: 4),
+      body: Center(
+        child: GridView.count(
+          padding: const EdgeInsets.all(20),
+          shrinkWrap: true,
+          primary: true,
+          crossAxisCount: 2,
+          children: <Widget>[sensorsConfig[0]],
+        ),
+      ),
+    );
+  }
+}
+
+List<SensorConfiguration> sensorsConfig = <SensorConfiguration>[
+  SensorConfiguration(
+    name: 'Accelerometer',
+    partNumber: 'LSM9DS1',
+    attributes: [
+      SensorAttribute(name: 'decimation'),
+      SensorAttribute(name: 'zAxisOutputEnable'),
+      SensorAttribute(name: 'yAxisOutputEnable'),
+      SensorAttribute(name: 'xAxisOutputEnable'),
+      SensorAttribute(name: 'outputDataRate'),
+      SensorAttribute(name: 'fullScale'),
+      SensorAttribute(name: 'bandwidthSelection'),
+      SensorAttribute(name: 'antialisingFilterBandwidthSelection'),
+      SensorAttribute(name: 'highResolutionMode'),
+      SensorAttribute(name: 'digitalFilterCutoffFrequency'),
+      SensorAttribute(name: 'filteredDataSelection'),
+      SensorAttribute(name: 'highPassFilterEnable'),
+      SensorAttribute(name: 'bdu'),
+      SensorAttribute(name: 'ble')
+    ],
+  ),
+];
+
+class SensorAttribute {
+  SensorAttribute({this.name, this.value});
+  final String name;
+  Uint8 value;
+}
+
+class SensorCalibration {
+  List<double> x;
+  List<double> y;
+  List<double> z;
+}
+
+class SensorConfiguration extends StatefulWidget {
+  SensorConfiguration(
+      {this.name,
+      this.partNumber,
+      this.bus,
+      this.address,
+      this.calibration,
+      this.attributes});
+
+  final List<SensorAttribute> attributes;
+  final String bus;
+  final Uint8 address;
+  final SensorCalibration calibration;
+  final String name;
+  final String partNumber;
+
+  @override
+  _SensorConfigurationState createState() => _SensorConfigurationState(
+      name: name,
+      address: address,
+      attributes: attributes,
+      bus: bus,
+      calibration: calibration,
+      partNumber: partNumber);
+}
+
+class _SensorConfigurationState extends State<SensorConfiguration> {
+  _SensorConfigurationState(
+      {this.name,
+      this.partNumber,
+      this.bus,
+      this.address,
+      this.calibration,
+      this.attributes});
+
+  List<SensorAttribute> attributes;
+  String bus;
+  Uint8 address;
+  SensorCalibration calibration;
+  String name;
+  String partNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 8,
+      color: Colors.grey[300],
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Icon(Icons.scatter_plot_sharp),
+          ),
+          Text(
+            name,
+            style: Theme.of(context).textTheme.headline6,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Flexible(
+              child: TextField(
+                controller: TextEditingController(text: bus),
+                decoration: const InputDecoration(
+                  hintText: '/dev/i2c-1',
+                  helperText: 'Bus',
+                  border: UnderlineInputBorder(),
+                ),
+                style: Theme.of(context).textTheme.bodyText2,
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Flexible(
+              child: TextField(
+                style: Theme.of(context).textTheme.bodyText2,
+                controller: TextEditingController(text: partNumber),
+                decoration: const InputDecoration(
+                  hintText: 'LSM9DS01',
+                  helperText: 'Part Number',
+                  border: UnderlineInputBorder(),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Flexible(
+              child: TextField(
+                style: Theme.of(context).textTheme.bodyText2,
+                controller: TextEditingController(text: address.toString()),
+                decoration: const InputDecoration(
+                  hintText: '0x00',
+                  helperText: 'Address',
+                  border: UnderlineInputBorder(),
+                ),
+              ),
+            ),
+          ),
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GridView.count(
+                crossAxisSpacing: 8,
+                crossAxisCount: 8,
+                children: List.generate(attributes.length, (index) {
+                  return TextField(
+                    style: Theme.of(context).textTheme.bodyText2,
+                    controller: TextEditingController(
+                        text: attributes[index].value.toString()),
+                    decoration: const InputDecoration(
+                        hintText: '0x00',
+                        helperText: "attribute",
+                        border: UnderlineInputBorder()),
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
