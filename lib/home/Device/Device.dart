@@ -6,43 +6,13 @@ enum ConnectionStatus { disconected, connecting, connected }
 
 class DeviceSettings {
   static final DeviceSettings _instance = DeviceSettings._internal();
+
   DeviceSettings._internal();
-  String ip = '192.168.0.27';
+  String ip = 'localhost';
   int port = 8080;
-  ConnectionStatus status;
-  IOWebSocketChannel channel;
 
   factory DeviceSettings() {
     return _instance;
-  }
-
-  Future<void> disconnect() async {
-    try {
-      channel.sink.close(wsStatus.goingAway);
-      status = ConnectionStatus.disconected;
-    } catch (e) {}
-  }
-
-  Future<void> cancel() async {
-    channel.sink.close(wsStatus.goingAway);
-    status = ConnectionStatus.disconected;
-  }
-
-  Future<void> connect() async {
-    status = ConnectionStatus.connecting;
-    try {
-      channel = IOWebSocketChannel.connect("ws://$ip:$port");
-      channel.sink.add("ping");
-      await for (dynamic value in channel.stream) {
-        if (value.toString().isNotEmpty) {
-          status = ConnectionStatus.connected;
-        } else {
-          status = ConnectionStatus.disconected;
-        }
-      }
-    } catch (e) {
-      status = ConnectionStatus.disconected;
-    }
   }
 }
 
@@ -52,4 +22,50 @@ class StatusInfo {
   final String text;
   final IconData icon;
   final String toolTipText;
+}
+
+class DeviceConnection {
+  static final DeviceConnection _instance = DeviceConnection._internal();
+  DeviceConnection._internal();
+  factory DeviceConnection() {
+    return _instance;
+  }
+
+  ConnectionStatus getConnectionStatus() {
+    return connectionStatus;
+  }
+
+  final settings = DeviceSettings();
+  IOWebSocketChannel _channel;
+  ConnectionStatus connectionStatus;
+
+  Future<void> disconnect() async {
+    try {
+      _channel.sink.close(wsStatus.goingAway);
+      connectionStatus = ConnectionStatus.disconected;
+    } catch (e) {}
+  }
+
+  Future<void> cancel() async {
+    _channel.sink.close(wsStatus.goingAway);
+    connectionStatus = ConnectionStatus.disconected;
+  }
+
+  Future<void> connect() async {
+    connectionStatus = ConnectionStatus.connecting;
+    try {
+      _channel =
+          IOWebSocketChannel.connect("ws://${settings.ip}:${settings.port}");
+      _channel.sink.add("ping");
+      await for (dynamic value in _channel.stream) {
+        if (value.toString().isNotEmpty) {
+          connectionStatus = ConnectionStatus.connected;
+        } else {
+          connectionStatus = ConnectionStatus.disconected;
+        }
+      }
+    } catch (e) {
+      connectionStatus = ConnectionStatus.disconected;
+    }
+  }
 }

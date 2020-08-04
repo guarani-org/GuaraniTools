@@ -30,13 +30,20 @@ class _ConnectionDialogState extends State<ConnectionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    inputIpController.text = deviceSettings.ip;
+    inputPortController.text = deviceSettings.port.toString();
+
     return SimpleDialog(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Icon(Icons.wifi),
+            child: Icon(
+              Icons.wifi,
+              size: 48,
+              color: Theme.of(context).colorScheme.primaryVariant,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -87,7 +94,7 @@ class _ConnectionDialogState extends State<ConnectionDialog> {
                   'Cancel',
                   style: TextStyle(color: Colors.white),
                 ),
-                onPressed: () => {Navigator.of(context).pop()},
+                onPressed: () => {Navigator.of(context).pop(false)},
               ),
             ),
             Padding(
@@ -105,7 +112,7 @@ class _ConnectionDialogState extends State<ConnectionDialog> {
                     _inputValid = true;
                   });
                   if (true == _inputValid) {
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(_inputValid);
                   }
                 },
               ),

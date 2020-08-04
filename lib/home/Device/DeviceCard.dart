@@ -1,6 +1,13 @@
 import 'Device.dart';
 import 'package:flutter/material.dart';
 import 'ConnectionDialog.dart';
+import 'DeviceScreen.dart';
+
+class ConnectionSnackInfo {
+  const ConnectionSnackInfo({this.message, this.icon});
+  final String message;
+  final Icon icon;
+}
 
 class DeviceCard extends StatefulWidget {
   @override
@@ -8,6 +15,27 @@ class DeviceCard extends StatefulWidget {
 }
 
 class _DeviceCardState extends State<DeviceCard> {
+  final Map<ConnectionStatus, ConnectionSnackInfo> snackMap = {
+    ConnectionStatus.connected: ConnectionSnackInfo(
+        icon: Icon(
+          Icons.check,
+          color: Colors.green,
+        ),
+        message: 'Device connected!'),
+    ConnectionStatus.connecting: ConnectionSnackInfo(
+        icon: Icon(
+          Icons.loop,
+          color: Colors.amber,
+        ),
+        message: 'Connecting to device...'),
+    ConnectionStatus.disconected: ConnectionSnackInfo(
+        icon: Icon(
+          Icons.warning,
+          color: Colors.amber,
+        ),
+        message: 'Device disconnected!')
+  };
+
   final Map<ConnectionStatus, StatusInfo> statusMap = {
     ConnectionStatus.connected: StatusInfo(
         color: Colors.green[600],
@@ -26,35 +54,46 @@ class _DeviceCardState extends State<DeviceCard> {
         toolTipText: 'Connect'),
   };
 
-  DeviceSettings deviceSettings = DeviceSettings();
+  DeviceConnection deviceConnection = DeviceConnection();
   ConnectionStatus connectionStatus = ConnectionStatus.disconected;
 
-  Future<void> disconnect(BuildContext context) async {
-    await deviceSettings.disconnect();
-    setState(() {
-      connectionStatus = deviceSettings.status;
-    });
-    if (connectionStatus == ConnectionStatus.disconected) {
-      final snack = SnackBar(
+  Widget getSnackBar({ConnectionStatus status, bool error = false}) {
+    if (error == false) {
+      return SnackBar(
         content: Row(children: [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: Icon(
-              Icons.warning,
-              color: Colors.amber,
-            ),
-          ),
-          Text('Device disconnected!'),
+              padding: const EdgeInsets.only(right: 8.0),
+              child: snackMap[status].icon),
+          Text(snackMap[status].message),
         ]),
       );
-      Scaffold.of(context).showSnackBar(snack);
+    }
+    return SnackBar(
+      content: Row(children: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: Icon(Icons.error, color: Colors.red),
+        ),
+        Text("Connection error!"),
+      ]),
+    );
+  }
+
+  Future<void> disconnect(BuildContext context) async {
+    await deviceConnection.disconnect();
+    setState(() {
+      connectionStatus = deviceConnection.getConnectionStatus();
+    });
+    if (connectionStatus == ConnectionStatus.disconected) {
+      Scaffold.of(context).removeCurrentSnackBar();
+      Scaffold.of(context).showSnackBar(getSnackBar(status: connectionStatus));
     }
   }
 
   Future<void> cancel(BuildContext context) async {
-    await deviceSettings.cancel();
+    await deviceConnection.cancel();
     setState(() {
-      connectionStatus = deviceSettings.status;
+      connectionStatus = deviceConnection.getConnectionStatus();
     });
   }
 
@@ -63,42 +102,42 @@ class _DeviceCardState extends State<DeviceCard> {
       connectionStatus = ConnectionStatus.connecting;
     });
 
-    await deviceSettings.connect().then((_) {
+    Scaffold.of(context).removeCurrentSnackBar();
+    Scaffold.of(context).showSnackBar(getSnackBar(status: connectionStatus));
+
+    await deviceConnection.connect().then((_) {
       setState(() {
-        connectionStatus = deviceSettings.status;
+        connectionStatus = deviceConnection.getConnectionStatus();
       });
 
       if (connectionStatus == ConnectionStatus.connected) {
-        final snack = SnackBar(
-          content: Row(children: [
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Icon(
-                Icons.check,
-                color: Colors.green,
-              ),
-            ),
-            Text(
-                'Device connected! Ip: ${deviceSettings.ip} Port: ${deviceSettings.port}'),
-          ]),
-        );
-        Scaffold.of(context).showSnackBar(snack);
+        Scaffold.of(context).removeCurrentSnackBar();
+        Scaffold.of(context)
+            .showSnackBar(getSnackBar(status: connectionStatus));
       } else {
-        final snack = SnackBar(
-          content: Row(children: [
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Icon(
-                Icons.error,
-                color: Colors.red,
-              ),
-            ),
-            Text('Unable to connect to device!'),
-          ]),
-        );
-        Scaffold.of(context).showSnackBar(snack);
+        Scaffold.of(context).removeCurrentSnackBar();
+        Scaffold.of(context)
+            .showSnackBar(getSnackBar(status: connectionStatus, error: true));
       }
     });
+  }
+
+  void onConnectButtonPressed(BuildContext context) {
+    if (connectionStatus == ConnectionStatus.connected) {
+      disconnect(context);
+      return;
+    }
+    if (connectionStatus == ConnectionStatus.connecting) {
+      cancel(context);
+      return;
+    }
+    if (connectionStatus == ConnectionStatus.disconected) {
+      showDialog(context: context, child: ConnectionDialog()).then((value) {
+        if (value == true) {
+          connect(context);
+        }
+      });
+    }
   }
 
   @override
@@ -111,10 +150,16 @@ class _DeviceCardState extends State<DeviceCard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.devices,
-              size: 64,
-            ),
+            FlatButton(
+                child: Icon(
+                  Icons.devices,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primaryVariant,
+                ),
+                onPressed: () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => DeviceScreen()));
+                }),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -123,28 +168,17 @@ class _DeviceCardState extends State<DeviceCard> {
                   style: Theme.of(context).textTheme.headline4,
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 12.0),
-                  child: IconButton(
-                    icon: Icon(
-                      statusMap[connectionStatus].icon,
-                      color: statusMap[connectionStatus].color,
-                      size: 48,
+                  padding: const EdgeInsets.only(left: 8.0, top: 6),
+                  child: Tooltip(
+                    message: statusMap[connectionStatus].toolTipText,
+                    child: FlatButton(
+                      child: Icon(
+                        statusMap[connectionStatus].icon,
+                        color: statusMap[connectionStatus].color,
+                        size: 48,
+                      ),
+                      onPressed: () => onConnectButtonPressed(context),
                     ),
-                    tooltip: statusMap[connectionStatus].toolTipText,
-                    onPressed: () {
-                      if (connectionStatus == ConnectionStatus.connected) {
-                        disconnect(context);
-                        return;
-                      }
-                      if (connectionStatus == ConnectionStatus.connecting) {
-                        cancel(context);
-                        return;
-                      }
-                      if (connectionStatus == ConnectionStatus.disconected) {
-                        showDialog(context: context, child: ConnectionDialog())
-                            .then((value) => connect(context));
-                      }
-                    },
                   ),
                 ),
               ],
